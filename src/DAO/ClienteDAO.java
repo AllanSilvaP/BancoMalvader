@@ -5,6 +5,7 @@ import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
 import model.Endereco;
+import util.DBUtil;
 
 import java.lang.System.Logger.Level;
 import java.sql.*;
@@ -228,30 +229,24 @@ public class ClienteDAO {
     }
 
     // Dentro de `clienteDAO.buscarContasPorCliente(cpf)`
-    public List<Conta> buscarContasPorCliente(String cpf) {
+    public List<Conta> buscarContasPorCliente(int idCliente) throws SQLException {
+        String query = "SELECT * FROM conta WHERE id_cliente = ?";
         List<Conta> contas = new ArrayList<>();
-        try {
-        	Connection conn = ConnectionFactory.getConnection();
-            String query = "SELECT * FROM contas WHERE cpf_cliente = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, cpf);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Conta conta = new Conta();
-                conta.setNumeroConta(rs.getString("numero_conta"));
-                conta.setSaldo(rs.getDouble("saldo"));
-                contas.add(conta);
-                System.out.println("Conta encontrada: " + conta.getNumeroConta());
+        Connection conn = ConnectionFactory.getConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, idCliente);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Conta conta = new Conta();
+                    conta.setId_conta(rs.getInt("id_conta"));
+                    conta.setNumeroConta(rs.getString("numero_conta"));
+                    conta.setSaldo(rs.getDouble("saldo"));
+                    contas.add(conta);
+                }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
         return contas;
     }
-
-
-
 
     // Buscar cliente por ID
     public Cliente buscarClientePorId(int id) {
@@ -317,6 +312,19 @@ public class ClienteDAO {
         }
         return saldo;
     }
+    
+    public void atualizarCliente(Cliente cliente) throws SQLException {
+        String sql = "UPDATE cliente SET telefone = ? WHERE id_cliente = ?";
+
+        try (PreparedStatement stmt = DBUtil.getConnection().prepareStatement(sql)) {
+            stmt.setString(1, cliente.getTelefone());
+            stmt.setInt(2, cliente.getId());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.log(Level.ERROR, "Erro ao atualizar cliente no banco.", e);
+            throw e;
+        }
+    }
 
 
     // Atualizar saldo de uma conta
@@ -366,18 +374,22 @@ public class ClienteDAO {
     }
 
     // Verificar se cliente existe
-    public boolean clienteExiste(int idCliente) throws SQLException {
-        String sql = "SELECT 1 FROM cliente WHERE id_cliente = ?";
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, idCliente);
+    public Cliente buscarClientePorIdUsuario(int idUsuario) throws SQLException {
+        String query = "SELECT * FROM cliente WHERE id_usuario = ?";
+        Connection conn = ConnectionFactory.getConnection();
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, idUsuario);
             try (ResultSet rs = stmt.executeQuery()) {
-                return rs.next(); // Retorna true se o cliente existe
+                if (rs.next()) {
+                    Cliente cliente = new Cliente();
+                    cliente.setId_cliente(rs.getInt("id_cliente"));
+                    cliente.setNome(rs.getString("nome"));
+                    // Preencha os outros campos conforme necessário
+                    return cliente;
+                }
             }
-        } catch (SQLException e) {
-            logger.log(Level.INFO, "Erro ao verificar se o cliente existe.", e);
-            throw e;
         }
+        return null; // Retorna null caso não encontre o cliente
     }
 }
 

@@ -1,11 +1,14 @@
 package App;
 
 import javax.swing.*;
+
 import controller.ClienteController;
 import controller.ContaController;
 import controller.FuncionarioController;
+import controller.BancoController;
 import service.Autenticacao;
 import DAO.FuncionarioDAO;
+import DAO.ClienteDAO;
 import DAO.ContaDAO; 
 import View.LoginView;
 import View.MenuClienteView;
@@ -25,12 +28,14 @@ public class BancoMalvader {
         // Criando instâncias de DAOs
         FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
         ContaDAO contaDAO = new ContaDAO();
+        ClienteDAO clienteDAO = new ClienteDAO();
+        FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
 
         // Criando o BancoMalvader com injeção de dependências correta
         BancoMalvader banco = new BancoMalvader(
             new ContaController(),
             new ClienteController(),
-            new FuncionarioController(funcionarioDAO, contaDAO), // Passando instâncias corretas
+            new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO), // Passando instâncias corretas
             new Autenticacao(null, null)
         );
 
@@ -51,9 +56,11 @@ public class BancoMalvader {
                 if (tipoUsuario.equals("funcionário")) {
                     FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
                     ContaDAO contaDAO = new ContaDAO();
-                    FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, contaDAO);
+                    ClienteDAO clienteDAO = new ClienteDAO();
+                    FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
+                    BancoController bancoController = new BancoController();
 
-                    new MenuFuncionarioView(null, funcionarioController).setVisible(true);
+                    new MenuFuncionarioView(bancoController, funcionarioController).setVisible(true);
                 } else {
                     new MenuClienteView().setVisible(true);
                 }

@@ -34,7 +34,6 @@ public class MenuClienteView extends JFrame {
         placeComponents(panel);
     }
 
-    // Esse método será chamado após a autenticação
     public void autenticarCliente(String cpf, String senha) {
         try {
             Autenticacao autenticacao = new Autenticacao(new UsuarioDAO(), new ClienteDAO());
@@ -42,16 +41,20 @@ public class MenuClienteView extends JFrame {
             clienteAutenticado = autenticacao.autenticarCliente(cpf, senha);
 
             if (clienteAutenticado != null) {
-                contaAutenticada = clienteAutenticado.getContas().get(0);  // Assume que o cliente tem ao menos uma conta
-                JOptionPane.showMessageDialog(this, "Login bem-sucedido! Conta número: " + contaAutenticada.getNumeroConta());
-                exibirMenu();  // Exibe o menu após autenticar
+                // Verifica se o cliente tem contas associadas
+                if (!clienteAutenticado.getContas().isEmpty()) {
+                    contaAutenticada = clienteAutenticado.getContas().get(0); // Pega a primeira conta associada
+                    JOptionPane.showMessageDialog(this, 
+                        "Login bem-sucedido! Conta número: " + contaAutenticada.getNumeroConta());
+                    exibirMenu();  // Exibe o menu após autenticar
+                } else {
+                    JOptionPane.showMessageDialog(this, "Nenhuma conta associada ao cliente.");
+                }
             }
-
         } catch (SQLException | IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }
-
 
     public void exibirMenu() {
         setVisible(true);

@@ -1,10 +1,11 @@
 package controller;
 
 import DAO.FuncionarioDAO;
+import DAO.ClienteDAO; // Adicionado ClienteDAO importação
 import DAO.ContaDAO;
-import model.Funcionario;
-import model.ContaPoupanca;
 import model.ContaCorrente;
+import model.ContaPoupanca;
+import model.Funcionario;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -12,14 +13,16 @@ import java.time.LocalDate;
 public class FuncionarioController {
 
     private final FuncionarioDAO funcionarioDAO;
+    private final ClienteDAO clienteDAO; // Adicionado ClienteDAO como um membro
     private final ContaDAO contaDAO;
 
-    // Construtor que inicializa o FuncionarioDAO e ContaDAO
-    public FuncionarioController(FuncionarioDAO funcionarioDAO, ContaDAO contaDAO) {
-        if (funcionarioDAO == null || contaDAO == null) {
+    // Construtor que inicializa o FuncionarioDAO, ClienteDAO, e ContaDAO
+    public FuncionarioController(FuncionarioDAO funcionarioDAO, ClienteDAO clienteDAO, ContaDAO contaDAO) {
+        if (funcionarioDAO == null || clienteDAO == null || contaDAO == null) {
             throw new IllegalArgumentException("Os DAOs não podem ser nulos.");
         }
         this.funcionarioDAO = funcionarioDAO;
+        this.clienteDAO = clienteDAO; // Inicializa clienteDAO
         this.contaDAO = contaDAO;
     }
 
@@ -53,17 +56,6 @@ public class FuncionarioController {
         funcionarioDAO.atualizarFuncionario(funcionario);
         System.out.println("Funcionário atualizado com sucesso!");
     }
-
-    // Método para deletar um funcionário por ID
-    public void deletarFuncionario(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("O ID do funcionário deve ser positivo.");
-        }
-
-        funcionarioDAO.deletarFuncionario(id);
-        System.out.println("Funcionário deletado com sucesso!");
-    }
-
     // Método para validar os dados do funcionário
     private void validarFuncionario(Funcionario funcionario) {
         if (funcionario == null) {

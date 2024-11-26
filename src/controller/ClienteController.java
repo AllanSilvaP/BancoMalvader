@@ -2,6 +2,9 @@ package controller;
 
 import DAO.ClienteDAO;
 import DAO.ConnectionFactory;
+import model.Cliente;
+import model.Endereco;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -90,4 +93,55 @@ public class ClienteController {
             throw e;
         }
     }
+    
+    public void atualizarCliente(int idCliente, String novoTelefone, String novoEndereco, 
+            int novoNumero, String novoCep, String novoBairro, 
+            String novaCidade, String novoEstado) throws Exception {
+if (idCliente <= 0) {
+throw new IllegalArgumentException("ID do cliente inválido.");
+}
+if (novoTelefone == null || novoTelefone.isBlank()) {
+throw new IllegalArgumentException("Telefone não pode ser vazio.");
+}
+if (novoEndereco == null || novoEndereco.isBlank()) {
+throw new IllegalArgumentException("Endereço não pode ser vazio.");
+}
+if (novoNumero <= 0) {
+throw new IllegalArgumentException("Número da casa não pode ser vazio.");
+}
+if (novoCep == null || novoCep.isBlank()) {
+throw new IllegalArgumentException("CEP não pode ser vazio.");
+}
+if (novoBairro == null || novoBairro.isBlank()) {
+throw new IllegalArgumentException("Bairro não pode ser vazio.");
+}
+if (novaCidade == null || novaCidade.isBlank()) {
+throw new IllegalArgumentException("Cidade não pode ser vazia.");
+}
+if (novoEstado == null || novoEstado.isBlank()) {
+throw new IllegalArgumentException("Estado não pode ser vazio.");
+}
+
+// Criar o cliente com os dados atualizados
+Cliente cliente = new Cliente();
+cliente.setId(idCliente);
+cliente.setTelefone(novoTelefone);
+
+// Atualizar o cliente no banco
+ClienteDAO clienteDAO = new ClienteDAO();
+clienteDAO.atualizarCliente(cliente);
+
+// Atualizar o endereço no banco
+Endereco endereco = new Endereco();
+endereco.setIdUsuario(idCliente); // Relaciona o ID do usuário
+endereco.setLocal(novoEndereco);
+endereco.setNumeroCasa(novoNumero); // Número da casa
+endereco.setCep(novoCep);
+endereco.setBairro(novoBairro);
+endereco.setCidade(novaCidade);
+endereco.setEstado(novoEstado);
+endereco.atualizarEndereco();
+}
+
+
 }

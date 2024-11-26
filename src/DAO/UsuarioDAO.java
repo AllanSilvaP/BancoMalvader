@@ -3,6 +3,7 @@ package DAO;
 import model.Usuario;
 import model.UsuarioInfo;
 import model.Funcionario;
+import model.Cliente;
 import model.Endereco;
 
 import java.sql.*;
@@ -130,10 +131,9 @@ public class UsuarioDAO {
         return false;
     }
 
-    // Buscar usuário por CPF
     public UsuarioInfo buscarUsuarioPorCpf(String cpf) {
         String sql = """
-            SELECT u.senha, 
+            SELECT u.id_usuario, u.senha, 
                    CASE WHEN f.id_funcionario IS NOT NULL THEN 1 ELSE 0 END AS is_funcionario,
                    CASE WHEN c.id_cliente IS NOT NULL THEN 1 ELSE 0 END AS is_cliente
             FROM usuario u
@@ -147,18 +147,19 @@ public class UsuarioDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
+                    int idUsuario = rs.getInt("id_usuario"); // Fetch id_usuario
                     String senhaHash = rs.getString("senha");
                     boolean isFuncionario = rs.getInt("is_funcionario") == 1;
                     boolean isCliente = rs.getInt("is_cliente") == 1;
 
-                    // Retorna o objeto UsuarioInfo com todos os dados necessários
-                    return new UsuarioInfo(senhaHash, isFuncionario, isCliente);
+                    // Return UsuarioInfo with idUsuario
+                    return new UsuarioInfo(idUsuario, senhaHash, isFuncionario, isCliente);
                 }
             }
         } catch (SQLException e) {
             logger.log(System.Logger.Level.ERROR, "Erro ao buscar usuário por CPF", e);
         }
-        return null; // Retorna null se o usuário não for encontrado
+        return null; // Return null if user is not found
     }
 
     // Salvar um novo usuário e retornar o ID do usuário

@@ -53,22 +53,22 @@ public class Autenticacao {
     public Cliente autenticarCliente(String cpf, String senha) throws SQLException {
         // Primeiro, buscar o usuário pelo CPF
         UsuarioInfo usuarioInfo = usuarioDAO.buscarUsuarioPorCpf(cpf);
-        
+
         // Verifica se o usuário foi encontrado
         if (usuarioInfo != null) {
             // Verifica a senha fornecida contra o hash armazenado
             if (BCrypt.checkpw(senha, usuarioInfo.getSenhaHash())) {
                 // Agora, buscamos o cliente (relacionado ao usuário)
-                Cliente cliente = clienteDAO.buscarClientePorIdUsuario(usuarioInfo.getId_usuario());  // Aqui foi alterado para getId_usuario
-                
+                Cliente cliente = clienteDAO.buscarClientePorIdUsuario(usuarioInfo.getIdUsuario());
+
                 if (cliente != null) {
                     // Se o cliente for encontrado, buscamos as contas associadas ao cliente
                     List<Conta> contas = clienteDAO.buscarContasPorCliente(cliente.getId_cliente());
-                    
+
                     if (!contas.isEmpty()) {
-                        cliente.setContas(contas);  // Armazena as contas no cliente
+                        cliente.setContas(contas); // Armazena as contas no cliente
                         System.out.println("Cliente autenticado com sucesso! Conta número: " + contas.get(0).getNumeroConta());
-                        return cliente;  // Retorna o cliente com suas contas
+                        return cliente; // Retorna o cliente com suas contas
                     } else {
                         System.out.println("Cliente encontrado, mas sem contas associadas.");
                     }
@@ -84,6 +84,7 @@ public class Autenticacao {
 
         throw new IllegalArgumentException("CPF ou senha inválidos!");
     }
+
 
 }
 

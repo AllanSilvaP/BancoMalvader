@@ -26,9 +26,11 @@ public class LoginView extends JFrame {
     	
     	FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
         ContaDAO contaDAO = new ContaDAO();
+        ClienteDAO clienteDAO = new ClienteDAO();
+        
         // Inicializa os controladores
         bancoController = new BancoController();
-        funcionarioController = new FuncionarioController(funcionarioDAO, contaDAO);
+        funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
 
         // Instância da classe de autenticação
         autenticacao = new Autenticacao(new UsuarioDAO(), new ClienteDAO());

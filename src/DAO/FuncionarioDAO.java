@@ -50,16 +50,6 @@ public class FuncionarioDAO {
         }
     }
 
-    public void deletarFuncionario(int idFuncionario) {
-        String sql = "DELETE FROM funcionario WHERE id_funcionario = ?";
-
-        try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, idFuncionario);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            logger.log(System.Logger.Level.ERROR, "Erro ao deletar o funcionário: " + idFuncionario, e);
-        }
-    }
 
     public Funcionario buscarFuncionarioPorId(int idFuncionario) {
         String sql = "SELECT * FROM funcionario f " +
@@ -79,6 +69,7 @@ public class FuncionarioDAO {
         }
         return funcionario;
     }
+    
     
     public void atualizarFuncionario(Funcionario funcionario) {
         String sql = "UPDATE funcionario SET nome = ?, cpf = ?, data_nascimento = ?, telefone = ?, senha = ?, tipo_usuario = ? WHERE id_funcionario = ?";

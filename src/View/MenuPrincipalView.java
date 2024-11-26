@@ -3,6 +3,7 @@ package View;
 import javax.swing.*;
 import DAO.FuncionarioDAO;
 import DAO.ContaDAO;
+import DAO.ClienteDAO;
 import controller.BancoController;
 import controller.FuncionarioController;
 
@@ -14,6 +15,8 @@ public class MenuPrincipalView extends JFrame {
     private static final long serialVersionUID = 1L;
     private final BancoController bancoController;
     private final FuncionarioController funcionarioController;
+    private final ClienteDAO clienteDAO;
+    
 
     // Construtor recebe os controladores
     public MenuPrincipalView(BancoController bancoController, FuncionarioController funcionarioController) {
@@ -23,6 +26,8 @@ public class MenuPrincipalView extends JFrame {
 
         this.bancoController = bancoController;
         this.funcionarioController = funcionarioController;
+		this.clienteDAO = new ClienteDAO();
+        
 
         // Configuração da janela
         setTitle("Menu Principal");
@@ -75,7 +80,8 @@ public class MenuPrincipalView extends JFrame {
                 BancoController bancoController = new BancoController();
                 FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
                 ContaDAO contaDAO = new ContaDAO();
-                FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, contaDAO);
+                ClienteDAO clienteDAO = new ClienteDAO();
+                FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
 
                 // Passa os controladores para a MenuPrincipalView
                 MenuPrincipalView frame = new MenuPrincipalView(bancoController, funcionarioController);
