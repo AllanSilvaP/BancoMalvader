@@ -5,8 +5,10 @@ import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
 import util.DBUtil;
+import util.DataManager;
 
 import java.sql.*;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,6 +70,7 @@ public class ContaDAO {
 
             // Inserir em conta_corrente ou conta_poupanca
             if (conta instanceof ContaCorrente corrente) {
+                // Inserir na tabela 'conta_corrente'
                 try (PreparedStatement stmtCorrente = conn.prepareStatement(sqlContaCorrente)) {
                     stmtCorrente.setDouble(1, corrente.getLimite());
                     stmtCorrente.setDate(2, Date.valueOf(corrente.getDataVencimento()));
@@ -75,6 +78,7 @@ public class ContaDAO {
                     stmtCorrente.executeUpdate();
                 }
             } else if (conta instanceof ContaPoupanca poupanca) {
+                // Inserir na tabela 'conta_poupanca'
                 try (PreparedStatement stmtPoupanca = conn.prepareStatement(sqlContaPoupanca)) {
                     stmtPoupanca.setDouble(1, poupanca.getTaxaRendimento());
                     stmtPoupanca.setInt(2, idContaInserida);
@@ -82,7 +86,14 @@ public class ContaDAO {
                 }
             }
 
+            // Commit no banco de dados
             conn.commit();
+
+            // Atualiza a lista de contas no arquivo
+            List<Conta> contas = DataManager.carregarContas("contas.dat");  // Carrega as contas do arquivo
+            contas.add(conta);  // Adiciona a nova conta à lista
+            DataManager.salvarContas(contas, "contas.dat");  // Salva a lista atualizada de contas no arquivo
+
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Erro ao salvar conta no banco de dados.", e);
             if (conn != null) {
@@ -105,26 +116,44 @@ public class ContaDAO {
         return idContaInserida;
     }
 
-
-
-
     // Deletar conta por número
     public boolean deletarContaPorNumero(String numeroConta) throws SQLException {
         if (numeroConta == null || numeroConta.trim().isEmpty()) {
             throw new IllegalArgumentException("O número da conta não pode ser nulo ou vazio.");
         }
 
-        String sql = "DELETE FROM conta WHERE numero_conta = ?";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        String disableFKChecks = "SET FOREIGN_KEY_CHECKS = 0";
+        String enableFKChecks = "SET FOREIGN_KEY_CHECKS = 1";
+        String deleteContaSQL = "DELETE FROM conta WHERE numero_conta = ?";
 
-            stmt.setString(1, numeroConta);
-            return stmt.executeUpdate() > 0;
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement();
+             PreparedStatement deleteStmt = conn.prepareStatement(deleteContaSQL)) {
+
+            // Desativa verificações de chave estrangeira
+            stmt.execute(disableFKChecks);
+
+            // Executa o comando DELETE
+            deleteStmt.setString(1, numeroConta);
+            boolean resultado = deleteStmt.executeUpdate() > 0;
+
+            // Reativa verificações de chave estrangeira
+            stmt.execute(enableFKChecks);
+
+            // Se a exclusão for bem-sucedida, atualize a lista de contas no arquivo
+            if (resultado) {
+                List<Conta> contas = DataManager.carregarContas("contas.dat");  // Carrega as contas do arquivo
+                contas.removeIf(conta -> conta.getNumeroConta().equals(numeroConta));  // Remove a conta pela chave
+                DataManager.salvarContas(contas, "contas.dat");  // Salva a lista atualizada de contas no arquivo
+            }
+
+            return resultado;
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Erro ao deletar conta pelo número.", e);
+            logger.log(Level.SEVERE, "Erro ao deletar conta pelo número: " + numeroConta, e);
             throw e;
         }
     }
+
     
     // Deletar conta por ID
     public boolean deletarConta(int idConta) throws SQLException {
@@ -132,23 +161,40 @@ public class ContaDAO {
             throw new IllegalArgumentException("O ID da conta deve ser maior que zero.");
         }
 
-        // Verifica se a conta tem saldo negativo antes de excluir
-        Conta conta = buscarContaPorId(idConta);
-        if (conta != null && conta.getSaldo() < 0) {
+        Conta conta = buscarContaPorId(idConta); // Verifica se a conta existe
+        if (conta == null) {
+            throw new IllegalArgumentException("Conta não encontrada.");
+        }
+
+        if (conta.getSaldo() < 0) {
             throw new IllegalStateException("A conta possui saldo negativo. Não pode ser excluída.");
         }
 
-        String sql = "DELETE FROM conta WHERE id_conta = ?";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        String disableFKChecks = "SET FOREIGN_KEY_CHECKS = 0";
+        String enableFKChecks = "SET FOREIGN_KEY_CHECKS = 1";
+        String deleteContaSQL = "DELETE FROM conta WHERE id_conta = ?";
 
-            stmt.setInt(1, idConta);
-            return stmt.executeUpdate() > 0; // Retorna true se ao menos uma linha foi afetada
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement();
+             PreparedStatement deleteStmt = conn.prepareStatement(deleteContaSQL)) {
+
+            // Desativa verificações de chave estrangeira
+            stmt.execute(disableFKChecks);
+
+            // Executa o comando DELETE
+            deleteStmt.setInt(1, idConta);
+            boolean resultado = deleteStmt.executeUpdate() > 0;
+
+            // Reativa verificações de chave estrangeira
+            stmt.execute(enableFKChecks);
+
+            return resultado;
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Erro ao deletar conta pelo ID: " + idConta, e);
             throw e;
         }
     }
+
 
 
 
@@ -233,13 +279,15 @@ public class ContaDAO {
     // Mapear o tipo de conta (Corrente ou Poupança)
     private Conta mapearConta(ResultSet rs) throws SQLException {
         String tipoConta = rs.getString("tipo_conta");
+        ClienteDAO clienteDAO = new ClienteDAO(); // Instancia o ClienteDAO
+        Cliente cliente = clienteDAO.buscarClientePorId(rs.getInt("id_cliente")); // Busca o cliente pelo id_cliente
+
         if ("CORRENTE".equalsIgnoreCase(tipoConta)) {
             return new ContaCorrente(
                     rs.getString("numero_conta"),
                     rs.getString("agencia"),
+                    cliente,  // Passa o Cliente
                     rs.getDouble("saldo"),
-                    rs.getString("tipo_conta"),
-                    rs.getInt("id_cliente"),
                     rs.getDouble("limite"),
                     rs.getDate("vencimento").toLocalDate()
             );
@@ -247,13 +295,15 @@ public class ContaDAO {
             return new ContaPoupanca(
                     rs.getString("numero_conta"),
                     rs.getString("agencia"),
+                    cliente,  // Passa o Cliente
                     rs.getDouble("saldo"),
-                    rs.getInt("id_cliente")
+                    rs.getDouble("taxa_rendimento")
             );
         } else {
             throw new SQLException("Tipo de conta desconhecido: " + tipoConta);
         }
     }
+
 
     // Buscar conta por ID
     public Conta buscarContaPorId(int idConta) throws SQLException {
@@ -274,5 +324,68 @@ public class ContaDAO {
         }
         return conta;
     }
-}
 
+    public Conta buscarContaPorNumero(String numeroConta) throws SQLException {
+        String sql = """
+            SELECT c.id_conta, c.numero_conta, c.agencia, c.saldo, c.tipo_conta, 
+                   c.id_cliente, cc.limite, cc.data_vencimento, cp.taxa_rendimento
+            FROM conta c
+            LEFT JOIN conta_corrente cc ON c.id_conta = cc.id_conta
+            LEFT JOIN conta_poupanca cp ON c.id_conta = cp.id_conta
+            WHERE c.numero_conta = ?
+        """;
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, numeroConta);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int id_cliente = rs.getInt("id_cliente");
+                    ClienteDAO clienteDAO = new ClienteDAO();
+                    Cliente cliente = clienteDAO.buscarClientePorId(id_cliente); // Buscar o cliente associado
+
+                    // Verifica o tipo de conta
+                    String tipoConta = rs.getString("tipo_conta").trim().toUpperCase();
+                    if ("CORRENTE".equalsIgnoreCase(tipoConta)) {
+                        return new ContaCorrente(
+                            rs.getString("numero_conta"),
+                            rs.getString("agencia"),
+                            cliente, // Passa o cliente
+                            rs.getDouble("saldo"),
+                            rs.getDouble("limite"),
+                            rs.getDate("data_vencimento").toLocalDate()
+                        );
+                    } else if ("POUPANCA".equalsIgnoreCase(tipoConta)) {
+                        return new ContaPoupanca(
+                            rs.getString("numero_conta"),
+                            rs.getString("agencia"),
+                            cliente, // Passa o cliente
+                            rs.getDouble("saldo"),
+                            rs.getDouble("taxa_rendimento")
+                        );
+                    }
+                }
+                return null; // Se não encontrar a conta
+            }
+        } catch (SQLException e) {
+            e.printStackTrace(); // Log de erro, útil para depuração
+            throw new SQLException("Erro ao consultar a conta: " + e.getMessage());
+        }
+    }
+    
+ // Método para atualizar o saldo de uma conta
+    public void atualizarSaldo(String numeroConta, double novoSaldo) throws SQLException {
+        String query = "UPDATE conta SET saldo = ? WHERE numero_conta = ?";
+
+        // Obtém a conexão da ConnectionFactory
+        try (Connection connection = ConnectionFactory.getConnection();
+             PreparedStatement statement = connection.prepareStatement(query)) {
+            statement.setDouble(1, novoSaldo);
+            statement.setString(2, numeroConta);
+            statement.executeUpdate();
+        }
+    }
+
+
+}

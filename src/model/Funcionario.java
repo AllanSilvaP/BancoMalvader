@@ -10,9 +10,7 @@ public class Funcionario extends Usuario implements Serializable {
     private String cargo;
     private Endereco endereco;
 
-    public Funcionario() {
-    	super("", "", null, "", "", new Endereco());  // Chama o construtor de Usuario com valores padrão
-    }
+ 
 
     public Funcionario(String nome, String cpf, LocalDate dataNascimento, String telefone, Endereco endereco, int codigoFuncionario, String cargo, String senha) {
         super(nome, cpf, dataNascimento, telefone, senha, endereco);  // Chama o construtor de Usuario

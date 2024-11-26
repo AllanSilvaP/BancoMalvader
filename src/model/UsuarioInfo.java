@@ -1,24 +1,30 @@
 package model;
-public class UsuarioInfo {
-	
-    private final int idUsuario; // Add the idUsuario field
-    private final String senhaHash;
-    private final boolean isFuncionario;
-    private final boolean isCliente;
 
-    public UsuarioInfo(int idUsuario, String senhaHash, boolean isFuncionario, boolean isCliente) {
+public class UsuarioInfo {
+    private int idUsuario;
+    private String nome;
+    private String senha;
+    private boolean isFuncionario;
+
+    // Construtor
+    public UsuarioInfo(int idUsuario, String nome, String senha, boolean isFuncionario) {
         this.idUsuario = idUsuario;
-        this.senhaHash = senhaHash;
+        this.nome = nome;
+        this.senha = senha;
         this.isFuncionario = isFuncionario;
-        this.isCliente = isCliente;
     }
 
+    // Getters
     public int getIdUsuario() {
         return idUsuario;
     }
 
-    public String getSenhaHash() {
-        return senhaHash;
+    public String getNome() {
+        return nome;
+    }
+
+    public String getSenha() {
+        return senha;
     }
 
     public boolean isFuncionario() {
@@ -26,6 +32,6 @@ public class UsuarioInfo {
     }
 
     public boolean isCliente() {
-        return isCliente;
+        return !isFuncionario;
     }
 }

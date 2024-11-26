@@ -3,6 +3,7 @@ package controller;
 import DAO.FuncionarioDAO;
 import DAO.ClienteDAO; // Adicionado ClienteDAO importação
 import DAO.ContaDAO;
+import model.Cliente;
 import model.ContaCorrente;
 import model.ContaPoupanca;
 import model.Funcionario;
@@ -22,7 +23,7 @@ public class FuncionarioController {
             throw new IllegalArgumentException("Os DAOs não podem ser nulos.");
         }
         this.funcionarioDAO = funcionarioDAO;
-        this.clienteDAO = clienteDAO; // Inicializa clienteDAO
+		this.clienteDAO = new ClienteDAO();
         this.contaDAO = contaDAO;
     }
 
@@ -37,6 +38,18 @@ public class FuncionarioController {
             System.out.println("Nenhum funcionário encontrado para o ID: " + id);
         }
         return funcionario;
+    }
+    
+    public Cliente buscarClientePorId(int idCliente) throws SQLException {
+        if (idCliente <= 0) {
+            throw new IllegalArgumentException("O ID do cliente deve ser um número positivo.");
+        }
+
+        Cliente cliente = clienteDAO.buscarClientePorId(idCliente);
+        if (cliente == null) {
+            System.out.println("Nenhum cliente encontrado para o ID: " + idCliente);
+        }
+        return cliente;
     }
 
     // Método para cadastrar um novo funcionário
@@ -79,29 +92,48 @@ public class FuncionarioController {
     }
 
     // Método para abrir uma conta poupança
-    public void abrirContaPoupanca(String agencia, String numeroConta, double saldo, int idCliente) throws SQLException {
+    public void abrirContaPoupanca(String agencia, String numeroConta, double saldo, int idCliente, double taxaRendimento) throws SQLException {
+        // Validação do saldo
         if (saldo < 0) {
             throw new IllegalArgumentException("O saldo inicial não pode ser negativo.");
         }
+        // Validação da taxa de rendimento
+        if (taxaRendimento < 0 || taxaRendimento > 1) {
+            throw new IllegalArgumentException("A taxa de rendimento deve estar entre 0 e 1.");
+        }
 
-        ContaPoupanca novaConta = new ContaPoupanca(numeroConta, agencia, saldo, idCliente);
+        // Criando a nova conta poupança
+        Cliente cliente = clienteDAO.buscarClientePorId(idCliente); // Buscando o cliente no banco de dados
+        ContaPoupanca novaConta = new ContaPoupanca(numeroConta, agencia, cliente, saldo, taxaRendimento);
+
+        // Salvando a conta no banco de dados
         contaDAO.salvarConta(novaConta);
         System.out.println("Conta poupança criada com sucesso!");
     }
 
-    // Método para abrir uma conta corrente
     public void abrirContaCorrente(String agencia, String numeroConta, double saldo, int idCliente, double limite, LocalDate vencimento) throws SQLException {
+        // Validação do saldo
         if (saldo < 0) {
             throw new IllegalArgumentException("O saldo inicial não pode ser negativo.");
         }
+
+        // Validação do limite
         if (limite < 0) {
             throw new IllegalArgumentException("O limite não pode ser negativo.");
         }
+
+        // Validação da data de vencimento
         if (vencimento == null) {
             throw new IllegalArgumentException("A data de vencimento não pode ser nula.");
         }
 
-        ContaCorrente novaConta = new ContaCorrente(numeroConta, agencia, saldo, "Corrente", idCliente, limite, vencimento);
+        // Buscando o cliente no banco de dados
+        Cliente cliente = clienteDAO.buscarClientePorId(idCliente);
+
+        // Criando a nova conta corrente
+        ContaCorrente novaConta = new ContaCorrente(numeroConta, agencia, cliente, saldo, limite, vencimento);
+
+        // Salvando a conta no banco de dados
         contaDAO.salvarConta(novaConta);
         System.out.println("Conta corrente criada com sucesso!");
     }
@@ -120,4 +152,3 @@ public class FuncionarioController {
     }
 
 }
-

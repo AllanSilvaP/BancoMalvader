@@ -6,6 +6,7 @@ import DAO.ContaDAO;
 import DAO.ClienteDAO;
 import controller.BancoController;
 import controller.FuncionarioController;
+import service.ContaService;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,6 +17,7 @@ public class MenuPrincipalView extends JFrame {
     private final BancoController bancoController;
     private final FuncionarioController funcionarioController;
     private final ClienteDAO clienteDAO;
+    private final ContaService contaService;
     
 
     // Construtor recebe os controladores
@@ -27,6 +29,7 @@ public class MenuPrincipalView extends JFrame {
         this.bancoController = bancoController;
         this.funcionarioController = funcionarioController;
 		this.clienteDAO = new ClienteDAO();
+		this.contaService = new ContaService();
         
 
         // Configuração da janela
@@ -53,7 +56,7 @@ public class MenuPrincipalView extends JFrame {
         funcionarioButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 // Exibe o menu do funcionário reutilizando os controladores existentes
-                new MenuFuncionarioView(bancoController, funcionarioController).setVisible(true);
+                new MenuFuncionarioView(bancoController, funcionarioController, contaService).setVisible(true);
                 dispose(); // Fecha a tela atual
             }
         });
@@ -92,4 +95,8 @@ public class MenuPrincipalView extends JFrame {
             }
         });
     }
+
+	public ClienteDAO getClienteDAO() {
+		return clienteDAO;
+	}
 }

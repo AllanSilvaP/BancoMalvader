@@ -8,7 +8,6 @@ import DAO.ConnectionFactory;
 
 public class Endereco implements Serializable {
     private static final long serialVersionUID = 1L;
-    private int idUsuario;
 
     private int id_endereco;  // ID gerado automaticamente
     private String cep;
@@ -19,6 +18,7 @@ public class Endereco implements Serializable {
     private String estado;
     private Cliente cliente; // Relacionamento com Cliente
     private Funcionario funcionario;
+    private int idUsuario;
 
     // Construtor completo
     public Endereco(int id_endereco, String cep, String local, int numero_casa, String bairro, String cidade, String estado) {
@@ -175,4 +175,5 @@ public class Endereco implements Serializable {
             stmt.executeUpdate();
         }
     }
+    
 }

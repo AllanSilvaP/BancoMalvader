@@ -6,15 +6,15 @@ import java.sql.SQLException;
 
 public class ConnectionFactory {
 
-    // Variáveis para conexão
-	private static String url = "jdbc:mysql://db-malvader.c7miwyc2szll.us-east-2.rds.amazonaws.com:3306/db_malvader"; 
-    private static String user = "AllanBanco"; 
-    private static String password = "Banco.lula13";
+    // CONECTA
+    private static final String URL = "jdbc:mysql://db-malvader.c7miwyc2szll.us-east-2.rds.amazonaws.com:3306/db_malvader";
+    private static final String USER = "AllanBanco";
+    private static final String PASSWORD = "Banco.lula13";
 
-    // Método estático para obter a conexão
+
     public static Connection getConnection() throws SQLException {
         try {
-            return DriverManager.getConnection(url, user, password);
+            return DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (SQLException e) {
             throw new SQLException("Erro ao estabelecer conexão com o banco de dados", e);
         }

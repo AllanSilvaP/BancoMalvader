@@ -27,7 +27,7 @@ public class CadastroClienteFrame extends JFrame {
     private JPasswordField senhaField;
     private JTextField dataNascimentoField;
 
-    public CadastroClienteFrame() {
+    public CadastroClienteFrame(String nome, String cpf, String telefone, String senha) {
         this.clienteDAO = new ClienteDAO();
         this.usuarioDAO = new UsuarioDAO();
 
@@ -40,10 +40,10 @@ public class CadastroClienteFrame extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
         add(panel);
-        placeComponents(panel, gbc);
+        placeComponents(panel, gbc, nome, cpf, telefone, senha);
     }
 
-    private void placeComponents(JPanel panel, GridBagConstraints gbc) {
+    private void placeComponents(JPanel panel, GridBagConstraints gbc, String nome, String cpf, String telefone, String senha) {
         gbc.gridx = 0;
         gbc.gridy = 0;
         panel.add(new JLabel("Nome:"), gbc);

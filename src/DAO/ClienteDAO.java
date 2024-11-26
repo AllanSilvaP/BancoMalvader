@@ -1,3 +1,4 @@
+
 package DAO;
 
 import model.Cliente;
@@ -9,6 +10,7 @@ import util.DBUtil;
 
 import java.lang.System.Logger.Level;
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -160,7 +162,7 @@ public class ClienteDAO {
                 stmtUsuario.setDate(3, Date.valueOf(cliente.getDataNascimento()));
                 stmtUsuario.setString(4, cliente.getTelefone());
                 stmtUsuario.setString(5, "CLIENTE");
-                stmtUsuario.setString(6, cliente.getSenhaHash());
+                stmtUsuario.setString(6, cliente.getSenha());
                 stmtUsuario.executeUpdate();
 
                 try (ResultSet rsUsuario = stmtUsuario.getGeneratedKeys()) {
@@ -199,54 +201,37 @@ public class ClienteDAO {
         return idUsuarioInserido;
     }
     
-    // Método para buscar cliente por CPF
  // Dentro de `clienteDAO.buscarClientePorCpf(cpf)`
     public Cliente buscarClientePorCpf(String cpf) {
-        Cliente cliente = null;
-        // Consulta ao banco de dados para buscar cliente pelo CPF
-        try {
-        	Connection conn = ConnectionFactory.getConnection();
-            String query = "SELECT * FROM clientes WHERE cpf = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, cpf);
-            ResultSet rs = stmt.executeQuery();
+        Cliente cliente = null;  // Inicializa a variável cliente
 
-            if (rs.next()) {
-                // Criação do objeto Cliente com os dados obtidos
-                cliente = new Cliente();
-                cliente.setCpf(rs.getString("cpf"));
-                cliente.setNome(rs.getString("nome"));
-                cliente.setSenha(rs.getString("senha"));  // Verifique se o nome do campo está correto
-                // Adicionar outras propriedades conforme necessário
-                System.out.println("Cliente encontrado: " + cliente.getCpf());
-            } else {
-                System.out.println("Nenhum cliente encontrado com o CPF: " + cpf);
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM clientes WHERE cpf = ?")) {
+
+            stmt.setString(1, cpf);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    // Criação do objeto Cliente com os dados obtidos
+                    cliente = mapearCliente(rs);  // Utiliza o método mapearCliente
+                    System.out.println("Cliente encontrado: " + cliente.getCpf());
+                } else {
+                    System.out.println("Nenhum cliente encontrado com o CPF: " + cpf);
+                }
+
             }
+
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.printStackTrace();  // Lida com erros de conexão e execução da query
+            System.out.println("Erro ao buscar cliente pelo CPF: " + cpf);
         }
-        return cliente;
+
+        return cliente;  // Retorna o cliente ou null caso não encontrado
     }
+
 
     // Dentro de `clienteDAO.buscarContasPorCliente(cpf)`
-    public List<Conta> buscarContasPorCliente(int idCliente) throws SQLException {
-        String query = "SELECT * FROM conta WHERE id_cliente = ?";
-        List<Conta> contas = new ArrayList<>();
-        Connection conn = ConnectionFactory.getConnection();
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, idCliente);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Conta conta = new Conta();
-                    conta.setId_conta(rs.getInt("id_conta"));
-                    conta.setNumeroConta(rs.getString("numero_conta"));
-                    conta.setSaldo(rs.getDouble("saldo"));
-                    contas.add(conta);
-                }
-            }
-        }
-        return contas;
-    }
+    
 
     // Buscar cliente por ID
     public Cliente buscarClientePorId(int id) {
@@ -274,7 +259,20 @@ public class ClienteDAO {
     }
 
     // Mapear resultado para um objeto Cliente
-    private Cliente mapearCliente(ResultSet rs) throws SQLException {
+    public Cliente mapearCliente(ResultSet rs) throws SQLException {
+        // Obtém os dados básicos do cliente
+        String nome = rs.getString("nome");
+        String cpf = rs.getString("cpf");
+        LocalDate dataNascimento = rs.getDate("data_nascimento").toLocalDate();
+        String telefone = rs.getString("telefone");
+        String senha = rs.getString("senha");
+        
+        // Validações de dados sensíveis
+        if (senha == null || senha.trim().isEmpty()) {
+            throw new IllegalArgumentException("A senha não pode ser vazia.");
+        }
+
+        // Mapeia o cliente
         Endereco endereco = new Endereco(
             rs.getString("cep"),
             rs.getString("local"),
@@ -284,16 +282,12 @@ public class ClienteDAO {
             rs.getString("estado")
         );
 
-        Cliente cliente = new Cliente();
-        cliente.setId_cliente(rs.getInt("id_cliente"));
-        cliente.setNome(rs.getString("nome"));
-        cliente.setCpf(rs.getString("cpf"));
-        cliente.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
-        cliente.setTelefone(rs.getString("telefone"));
-        cliente.setEndereco(endereco);
-
-        return cliente;
+        // Retorna o objeto cliente com base no construtor definido
+        return new Cliente(nome, cpf, dataNascimento, telefone, endereco, senha, null);
     }
+
+
+
 
     public double buscarSaldoPorNumeroConta(String numeroConta) throws SQLException {
         String sql = "SELECT saldo FROM conta WHERE numero_conta = ?";
@@ -314,20 +308,35 @@ public class ClienteDAO {
     }
     
     public void atualizarCliente(Cliente cliente) throws SQLException {
-        String sql = "UPDATE cliente SET telefone = ? WHERE id_cliente = ?";
+        String sqlUsuario = "UPDATE usuario SET nome = ?, cpf = ?, data_nascimento = ?, telefone = ?, senha = ? WHERE id_usuario  = ?";
 
-        try (PreparedStatement stmt = DBUtil.getConnection().prepareStatement(sql)) {
-            stmt.setString(1, cliente.getTelefone());
-            stmt.setInt(2, cliente.getId());
-            stmt.executeUpdate();
+        // Inicia uma transação para garantir que a atualização seja feita com sucesso
+        try (Connection conn = DBUtil.getConnection()) {
+            // Desabilita o auto-commit para realizar a transação
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement stmtUsuario = conn.prepareStatement(sqlUsuario)) {
+                // Atualiza os dados do usuário
+                stmtUsuario.setString(1, cliente.getNome());
+                stmtUsuario.setString(2, cliente.getCpf());
+                stmtUsuario.setDate(3, Date.valueOf(cliente.getDataNascimento()));
+                stmtUsuario.setString(4, cliente.getTelefone());
+                stmtUsuario.setString(5, cliente.getSenha());
+                stmtUsuario.setInt(6, cliente.getId());
+                stmtUsuario.executeUpdate();
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                logger.log(Level.ERROR, "Erro ao atualizar os dados do cliente.", e);
+                throw e;  
+            }
         } catch (SQLException e) {
-            logger.log(Level.ERROR, "Erro ao atualizar cliente no banco.", e);
+            logger.log(Level.ERROR, "Erro ao abrir conexão com o banco de dados para atualizar o cliente.", e);
             throw e;
         }
     }
 
-
-    // Atualizar saldo de uma conta
     public void atualizarSaldo(int idCliente, double valor) throws SQLException {
         if (valor == 0) {
             throw new IllegalArgumentException("Valor para atualização do saldo não pode ser zero.");
@@ -348,7 +357,6 @@ public class ClienteDAO {
         }
     }
 
-    // Listar todos os clientes
     public List<Cliente> listarTodosClientes() {
         List<Cliente> clientes = new ArrayList<>();
         String sql = """
@@ -373,23 +381,58 @@ public class ClienteDAO {
         return clientes;
     }
 
-    // Verificar se cliente existe
     public Cliente buscarClientePorIdUsuario(int idUsuario) throws SQLException {
         String query = "SELECT * FROM cliente WHERE id_usuario = ?";
-        Connection conn = ConnectionFactory.getConnection();
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+        Cliente cliente = null;
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
             stmt.setInt(1, idUsuario);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    Cliente cliente = new Cliente();
-                    cliente.setId_cliente(rs.getInt("id_cliente"));
-                    cliente.setNome(rs.getString("nome"));
-                    // Preencha os outros campos conforme necessário
-                    return cliente;
+                    cliente = mapearCliente(rs);
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace(); 
+            throw new SQLException("Erro ao buscar cliente pelo ID do usuário", e);
+        }
+
+        return cliente; 
+    }
+    
+    public void atualizarSaldoPorIdConta(int idConta, double valor) throws SQLException {
+        String sql = "UPDATE conta SET saldo = saldo + ? WHERE id_conta = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDouble(1, valor); 
+            ps.setInt(2, idConta);
+            int rowsUpdated = ps.executeUpdate();
+
+            if (rowsUpdated == 0) {
+                throw new SQLException("Não foi possível atualizar o saldo para o id_conta: " + idConta);
+            }
+        }
+    }
+
+    public double buscarSaldoPorIdConta(int idConta) throws SQLException {
+        String sql = "SELECT saldo FROM conta WHERE id_conta = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, idConta);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("saldo");
+                } else {
+                    throw new SQLException("Conta não encontrada para o id_conta: " + idConta);
                 }
             }
         }
-        return null; // Retorna null caso não encontre o cliente
     }
-}
 
+}

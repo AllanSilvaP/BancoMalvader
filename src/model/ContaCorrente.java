@@ -19,21 +19,7 @@ public class ContaCorrente extends Conta implements Serializable {
         this.dataVencimento = dataVencimento;
     }
 
-    // Novo construtor aceitando valores diretamente
-    public ContaCorrente(String numeroConta, String agencia, double saldo, String tipoConta, int idCliente, double limite, LocalDate dataVencimento) {
-        super(numeroConta, agencia, saldo, tipoConta, idCliente);
-        if (limite < 0) {
-            throw new IllegalArgumentException("O limite não pode ser negativo.");
-        }
-        this.limite = limite;
-        this.dataVencimento = dataVencimento;
-    }
-
-    // Construtor vazio para inicialização
-    public ContaCorrente() {
-        super();
-    }
-
+    
     // Métodos
     public double consultarLimite() {
         return limite;
@@ -86,4 +72,3 @@ public class ContaCorrente extends Conta implements Serializable {
                 getId_conta(), getNumeroConta(), getAgencia(), getSaldo(), limite, dataVencimento);
     }
 }
-

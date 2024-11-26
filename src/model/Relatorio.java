@@ -6,33 +6,44 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class Relatorio implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String tipoRelatorio;  
-    private LocalDateTime dataGeracao; 
-    private String conteudo; 
+    private String tipoRelatorio;
+    private LocalDateTime dataGeracao;
+    private String conteudo;
+    private List<Conta> contas; // Lista de contas para gerar relatório
 
     // Construtor
-    public Relatorio(String tipoRelatorio, LocalDateTime dataGeracao, String conteudo) {
+    public Relatorio(String tipoRelatorio, LocalDateTime dataGeracao, String conteudo, List<Conta> contas) {
         this.tipoRelatorio = tipoRelatorio;
         this.dataGeracao = dataGeracao;
         this.conteudo = conteudo;
+        this.contas = contas;
     }
 
-    // Gerar relatório geral em formato CSV
+    // Gerar relatório geral em formato CSV com informações da conta
     public void gerarRelatorioGeral() {
         System.out.println("Gerando relatório geral...");
         String nomeArquivo = "relatorio_" + tipoRelatorio + "_" + dataGeracao.toString().replace(":", "_") + ".csv";
-        
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(nomeArquivo))) {
-            writer.write("Tipo,Data de Geração,Conteúdo");
+            // Escreve o cabeçalho do CSV
+            writer.write("Tipo,Data de Geração,Conteúdo,Numero da Conta,Tipo de Conta,Saldo");
             writer.newLine();
 
+            // Escreve as informações do relatório
             writer.write(tipoRelatorio + "," + dataGeracao.toString() + "," + conteudo);
             writer.newLine();
-            
+
+            // Escreve as informações das contas
+            for (Conta conta : contas) {
+                writer.write("," + conta.getNumeroConta() + "," + conta.getTipoConta() + "," + conta.getSaldo());
+                writer.newLine();
+            }
+
             System.out.println("Relatório geral gerado com sucesso!");
         } catch (IOException e) {
             System.err.println("Erro ao gerar o relatório: " + e.getMessage());
@@ -42,7 +53,7 @@ public class Relatorio implements Serializable {
     // Exportar relatório para Excel
     public void exportarParaExcel() {
         System.out.println("Exportando relatório para Excel...");
-        
+
         String nomeArquivo = "relatorio_" + tipoRelatorio + "_" + dataGeracao.toString().replace(":", "_") + ".csv";
         File arquivo = new File(nomeArquivo);
 
@@ -76,5 +87,13 @@ public class Relatorio implements Serializable {
 
     public void setConteudo(String conteudo) {
         this.conteudo = conteudo;
+    }
+
+    public List<Conta> getContas() {
+        return contas;
+    }
+
+    public void setContas(List<Conta> contas) {
+        this.contas = contas;
     }
 }

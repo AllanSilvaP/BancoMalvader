@@ -15,7 +15,6 @@ public class ContaService {
         this.contaDAO = new ContaDAO();
     }
 
-    // Método para abrir uma conta
     public void abrirConta(Conta novaConta) throws SQLException {
         if (novaConta == null) {
             throw new IllegalArgumentException("Conta inválida. Não foi possível abrir a conta.");
@@ -29,80 +28,61 @@ public class ContaService {
 		logger.info("Conta aberta com sucesso para o cliente: " + novaConta.getCliente().getNome());
     }
 
-    // Método para encerrar uma conta
-    public void encerrarConta(int contaId) {
-        try {
-            Conta conta = contaDAO.buscarContaPorId(contaId);
-
-            if (conta == null) {
-                throw new IllegalArgumentException("Conta não encontrada.");
-            }
-
-            if (conta.getSaldo() < 0) {
-                throw new IllegalStateException("A conta possui saldo devedor. Não é possível encerrá-la.");
-            }
-
-            boolean deletada = contaDAO.deletarConta(contaId);
-            if (deletada) {
-                logger.info("Conta com número " + contaId + " encerrada com sucesso.");
-            } else {
-                throw new IllegalStateException("Erro ao encerrar a conta. Nenhuma linha foi afetada.");
-            }
-        } catch (SQLException e) {
-            logger.severe("Erro ao encerrar conta: " + e.getMessage());
-            throw new RuntimeException("Erro ao encerrar conta.", e);
-        }
-    }
-
-    // Método para realizar um saque
-    public void realizarSaque(int contaId, double valor) throws SaldoInsuficienteException, ValorInvalidoException {
+    public void realizarSaque(String numeroConta, double valor) throws SaldoInsuficienteException, ValorInvalidoException {
         if (valor <= 0) {
             throw new ValorInvalidoException("O valor de saque deve ser positivo.");
         }
 
         try {
-            Conta conta = contaDAO.buscarContaPorId(contaId);
+            Conta conta = contaDAO.buscarContaPorNumero(numeroConta);
 
             if (conta == null) {
                 throw new IllegalArgumentException("Conta não encontrada.");
             }
 
-            if (conta.getSaldo() < valor) {
-                throw new SaldoInsuficienteException("Saldo insuficiente para realizar o saque.");
-            }
 
-            conta.sacar(valor); // Chama sacar na instância de Conta
-            contaDAO.atualizarConta(conta); // Atualiza a conta no banco
-            logger.info("Saque de " + valor + " realizado com sucesso na conta " + contaId);
+            conta.sacar(valor);
 
+        
+            conta.atualizarConta(conta);
+
+            logger.info("Saque de " + valor + " realizado com sucesso na conta " + numeroConta);
         } catch (SQLException e) {
-            logger.severe("Erro ao realizar saque: " + e.getMessage());
-            throw new RuntimeException("Erro ao realizar saque.", e);
+            logger.severe("Erro ao realizar saque na conta " + numeroConta + ": " + e.getMessage());
+            throw new RuntimeException("Erro ao atualizar a conta no banco após o saque.", e);
+        } catch (SaldoInsuficienteException e) {
+            logger.warning("Falha ao realizar saque: " + e.getMessage());
+            throw e; // Relança a exceção para ser tratada em outro lugar, se necessário
         }
     }
 
-    // Método para realizar um depósito
-    public void realizarDeposito(int contaId, double valor) throws ValorInvalidoException {
+    public void realizarDeposito(String numeroConta, double valor) throws ValorInvalidoException {
         if (valor <= 0) {
             throw new ValorInvalidoException("O valor de depósito deve ser positivo.");
         }
 
         try {
-            Conta conta = contaDAO.buscarContaPorId(contaId);
+            // Busca a conta pelo número
+            Conta conta = contaDAO.buscarContaPorNumero(numeroConta);
 
             if (conta == null) {
                 throw new IllegalArgumentException("Conta não encontrada.");
             }
 
-            conta.depositar(valor); // Chama depositar na instância de Conta
-            contaDAO.atualizarConta(conta); // Atualiza a conta no banco
-            logger.info("Depósito de " + valor + " realizado com sucesso na conta " + contaId);
+            // Realiza o depósito
+            conta.depositar(valor);
 
+            // Atualiza o saldo da conta no banco
+            conta.atualizarConta(conta);
+
+            logger.info("Depósito de " + valor + " realizado com sucesso na conta " + numeroConta);
         } catch (SQLException e) {
-            logger.severe("Erro ao realizar depósito: " + e.getMessage());
-            throw new RuntimeException("Erro ao realizar depósito.", e);
+            logger.severe("Erro ao realizar depósito na conta " + numeroConta + ": " + e.getMessage());
+            throw new RuntimeException("Erro ao atualizar a conta no banco após o depósito.", e);
         }
     }
+
+
 
     // Método para atualizar os dados de uma conta
     public void atualizarConta(Conta conta) {
@@ -128,4 +108,21 @@ public class ContaService {
             throw new RuntimeException("Erro ao buscar conta.", e);
         }
     }
+
+    public void encerrarConta(String numeroConta) throws SQLException, IllegalArgumentException {
+        // Verifica se a conta existe pelo número da conta
+        Conta conta = contaDAO.buscarContaPorNumero(numeroConta);
+        if (conta == null) {
+            throw new IllegalArgumentException("Conta não encontrada.");
+        }
+
+        // Verifica se o saldo da conta é zero
+        if (conta.getSaldo() > 0) {
+            throw new IllegalArgumentException("Não é possível encerrar a conta. O saldo precisa estar zerado.");
+        }
+
+        // Chama o DAO para realizar a operação de encerramento da conta
+        contaDAO.deletarContaPorNumero(numeroConta);
+    }
+
 }

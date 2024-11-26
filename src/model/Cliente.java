@@ -2,8 +2,6 @@ package model;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Cliente extends Usuario implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -11,15 +9,14 @@ public class Cliente extends Usuario implements Serializable {
     private Conta conta;
 
     public Cliente(String nome, String cpf, LocalDate dataNascimento, String telefone, Endereco endereco, String senha, Conta conta) {
-        // Não passa o id_cliente para o super, pois ele será gerado automaticamente após a inserção
         super(nome, cpf, dataNascimento, telefone, senha, endereco);
         this.conta = conta;
     }
-
+/*
     public Cliente() {
-        super("", "", null, "", "", null);  // Inicializa com valores vazios
+        super("Desconhecido", "", null, "", "", null);  // Inicializa com valores vazios
     }
-
+*/
     @Override
     public Usuario getUsuario() {
         return this;
@@ -39,14 +36,13 @@ public class Cliente extends Usuario implements Serializable {
                 endereco != null ? endereco.toString() : "Endereço não disponível");
     }
 
-    // Getter para id_cliente
-    public int getId_cliente() {
-        return id_cliente;
-    }
 
-    // Setter para id_cliente que pode ser chamado após a inserção no banco para atribuir o ID gerado
     public void setId_cliente(int id_cliente) {
         this.id_cliente = id_cliente;
+    }
+
+    public int getId_cliente() {
+        return id_cliente;
     }
 
     public Conta getConta() {
@@ -55,6 +51,14 @@ public class Cliente extends Usuario implements Serializable {
 
     public void setConta(Conta conta) {
         this.conta = conta;
+    }
+    
+    public void setUsuario(Usuario usuario) {
+        this.setNome(usuario.getNome());
+        this.setCpf(usuario.getCpf());
+        this.setDataNascimento(usuario.getDataNascimento());
+        this.setTelefone(usuario.getTelefone());
+        this.setEndereco(usuario.getEndereco());
     }
 
     @Override
@@ -67,24 +71,5 @@ public class Cliente extends Usuario implements Serializable {
                 conta != null ? conta.getNumeroConta() : "Sem conta");
     }
     
-    private List<Conta> contas = new ArrayList<>();
-
-    public List<Conta> getContas() {
-        return contas;
-    }
-
-    public void setContas(List<Conta> contas) {
-        this.contas = contas;
-    }
-
-    
-    public void setUsuario(Usuario usuario) {
-        this.setNome(usuario.getNome());
-        this.setCpf(usuario.getCpf());
-        this.setDataNascimento(usuario.getDataNascimento());
-        this.setTelefone(usuario.getTelefone());
-        this.setEndereco(usuario.getEndereco());
-        // Outros campos de Usuario, se necessário
-    }
 
 }

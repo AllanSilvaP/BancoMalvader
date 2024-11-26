@@ -1,15 +1,16 @@
 package App;
 
 import javax.swing.*;
-
 import controller.ClienteController;
 import controller.ContaController;
 import controller.FuncionarioController;
 import controller.BancoController;
 import service.Autenticacao;
+import service.ContaService;
 import DAO.FuncionarioDAO;
 import DAO.ClienteDAO;
-import DAO.ContaDAO; 
+import DAO.ContaDAO;
+import DAO.UsuarioDAO;
 import View.LoginView;
 import View.MenuClienteView;
 import View.MenuFuncionarioView;
@@ -19,24 +20,44 @@ import java.sql.SQLException;
 public class BancoMalvader {
 
     private Autenticacao autenticacaoService;
+    private FuncionarioController funcionarioController;
+    private ClienteController clienteController;
+    private ContaController contaController;
+    private ContaService contaService;
 
-    public BancoMalvader(ContaController contaController, ClienteController clienteController, FuncionarioController funcionarioController, Autenticacao autenticacaoService) {
+    // Construtor com injeção de dependência correta
+    public BancoMalvader(Autenticacao autenticacaoService,
+                         FuncionarioController funcionarioController,
+                         ClienteController clienteController,
+                         ContaController contaController,
+                         ContaService contaService) {
         this.autenticacaoService = autenticacaoService;
+        this.funcionarioController = funcionarioController;
+        this.clienteController = clienteController;
+        this.contaController = contaController;
+        this.contaService = contaService;
     }
 
     public static void main(String[] args) throws SQLException {
         // Criando instâncias de DAOs
+        UsuarioDAO usuarioDAO = new UsuarioDAO();
         FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
         ContaDAO contaDAO = new ContaDAO();
         ClienteDAO clienteDAO = new ClienteDAO();
-        FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
+        ContaService contaService = new ContaService();
 
-        // Criando o BancoMalvader com injeção de dependências correta
+        // Criando as instâncias dos controladores com os DAOs necessários
+        FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
+        ClienteController clienteController = new ClienteController(clienteDAO);
+        ContaController contaController = new ContaController(contaService, contaDAO);
+
+        // Criando o BancoMalvader com injeção de dependências
         BancoMalvader banco = new BancoMalvader(
-            new ContaController(),
-            new ClienteController(),
-            new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO), // Passando instâncias corretas
-            new Autenticacao(null, null)
+            new Autenticacao(usuarioDAO), // Passando o UsuarioDAO para a Autenticacao
+            funcionarioController,
+            clienteController,
+            contaController,
+            contaService
         );
 
         banco.iniciarSistema();
@@ -53,15 +74,13 @@ public class BancoMalvader {
             String senha = JOptionPane.showInputDialog("Digite a senha do " + tipoUsuario + ":");
 
             if (autenticacaoService.autenticarUsuario(cpf, senha)) {
+                // Se o tipo for funcionário
                 if (tipoUsuario.equals("funcionário")) {
-                    FuncionarioDAO funcionarioDAO = new FuncionarioDAO();
-                    ContaDAO contaDAO = new ContaDAO();
-                    ClienteDAO clienteDAO = new ClienteDAO();
-                    FuncionarioController funcionarioController = new FuncionarioController(funcionarioDAO, clienteDAO, contaDAO);
                     BancoController bancoController = new BancoController();
 
-                    new MenuFuncionarioView(bancoController, funcionarioController).setVisible(true);
+                    new MenuFuncionarioView(bancoController, funcionarioController, contaService).setVisible(true);
                 } else {
+                    // Se for cliente
                     new MenuClienteView().setVisible(true);
                 }
             } else {

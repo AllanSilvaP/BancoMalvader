@@ -62,28 +62,34 @@ public class CadastroContaFrame extends JFrame {
     }
 
     private void cadastrarUsuario() {
-        // Obter dados preenchidos
+        // Obter dados preenchidos pelo usuário
         String nome = nomeField.getText().trim();
         String cpf = cpfField.getText().trim();
         String telefone = telefoneField.getText().trim();
-        String senha = new String(senhaField.getPassword());
-        String tipoUsuario = (String) tipoUsuarioCombo.getSelectedItem();
+        String senha = new String(senhaField.getPassword()).trim();
+        String tipoUsuario = (String) tipoUsuarioCombo.getSelectedItem(); // "FUNCIONARIO" ou "CLIENTE"
 
-        if (nome.isEmpty() || cpf.isEmpty() || telefone.isEmpty() || senha.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Preencha todos os campos!", "Erro", JOptionPane.ERROR_MESSAGE);
+        // Validar campos obrigatórios
+        if (nome.isEmpty() || cpf.isEmpty() || telefone.isEmpty() || senha.isEmpty() || tipoUsuario == null) {
+            JOptionPane.showMessageDialog(this, "Preencha todos os campos obrigatórios!", "Erro", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Lógica para cadastro do cliente ou funcionário sem conta bancária
+        // Abrir a tela específica com base no tipo de usuário
         if ("FUNCIONARIO".equals(tipoUsuario)) {
-            new CadastroFuncionarioFrame(null, nome, cpf, telefone).setVisible(true);
+            // Abrir tela de cadastro de funcionário
+            new CadastroFuncionarioFrame(nome, cpf, telefone, senha).setVisible(true);
         } else if ("CLIENTE".equals(tipoUsuario)) {
-            new CadastroClienteFrame().setVisible(true);
+            // Abrir tela de cadastro de cliente
+            new CadastroClienteFrame(nome, cpf, telefone, senha).setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Tipo de usuário inválido!", "Erro", JOptionPane.ERROR_MESSAGE);
         }
 
-        // Fechar a tela de cadastro de conta
+        // Fechar a tela atual de cadastro básico
         this.dispose();
     }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new CadastroContaFrame().setVisible(true));
