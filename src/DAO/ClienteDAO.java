@@ -1,11 +1,10 @@
 package DAO;
 
 import model.Cliente;
-import model.Endereco;
 import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
-import util.DBUtil;
+import model.Endereco;
 
 import java.lang.System.Logger.Level;
 import java.sql.*;
@@ -18,7 +17,8 @@ public class ClienteDAO {
     public ClienteDAO() {
         // Inicializa o DAO
     }
-    
+
+    // Salvar conta no banco
     public int salvarConta(Conta conta) {
         String sqlConta = """
             INSERT INTO conta (numero_conta, agencia, saldo, tipo_conta, id_cliente)
@@ -34,13 +34,13 @@ public class ClienteDAO {
         """;
 
         int idContaInserida = -1;
-        Connection conn = null; // Declare connection outside the try
+        Connection conn = null;
 
         try {
             conn = ConnectionFactory.getConnection();
-            conn.setAutoCommit(false); // Begin transaction
+            conn.setAutoCommit(false);
 
-            // Insert into "conta" table
+            // Inserir na tabela 'conta'
             try (PreparedStatement stmtConta = conn.prepareStatement(sqlConta, Statement.RETURN_GENERATED_KEYS)) {
                 stmtConta.setString(1, conta.getNumeroConta());
                 stmtConta.setString(2, conta.getAgencia());
@@ -49,7 +49,6 @@ public class ClienteDAO {
                 stmtConta.setInt(5, conta.getId_cliente());
                 stmtConta.executeUpdate();
 
-                // Get the generated ID for "conta"
                 try (ResultSet rsConta = stmtConta.getGeneratedKeys()) {
                     if (rsConta.next()) {
                         idContaInserida = rsConta.getInt(1);
@@ -57,9 +56,8 @@ public class ClienteDAO {
                 }
             }
 
-            // Insert into specific table for account type
+            // Inserir na tabela específica de conta corrente ou poupança
             if (conta instanceof ContaCorrente corrente) {
-                // Insert into "conta_corrente" table
                 try (PreparedStatement stmtContaCorrente = conn.prepareStatement(sqlContaCorrente)) {
                     stmtContaCorrente.setDouble(1, corrente.getLimite());
                     stmtContaCorrente.setDate(2, Date.valueOf(corrente.getDataVencimento()));
@@ -67,7 +65,6 @@ public class ClienteDAO {
                     stmtContaCorrente.executeUpdate();
                 }
             } else if (conta instanceof ContaPoupanca poupanca) {
-                // Insert into "conta_poupanca" table
                 try (PreparedStatement stmtContaPoupanca = conn.prepareStatement(sqlContaPoupanca)) {
                     stmtContaPoupanca.setDouble(1, poupanca.getTaxaRendimento());
                     stmtContaPoupanca.setInt(2, idContaInserida);
@@ -75,33 +72,72 @@ public class ClienteDAO {
                 }
             }
 
-            conn.commit(); // Commit transaction
+            conn.commit();
         } catch (SQLException e) {
-            logger.log(System.Logger.Level.ERROR, "Erro ao salvar conta no banco de dados.", e);
+            logger.log(Level.ERROR, "Erro ao salvar conta no banco de dados.", e);
             if (conn != null) {
                 try {
-                    conn.rollback(); // Rollback transaction on error
+                    conn.rollback();
                 } catch (SQLException rollbackEx) {
-                    logger.log(System.Logger.Level.ERROR, "Erro ao realizar rollback.", rollbackEx);
+                    logger.log(Level.ERROR, "Erro ao realizar rollback.", rollbackEx);
                 }
             }
         } finally {
             if (conn != null) {
                 try {
-                    conn.close(); // Ensure connection is closed
+                    conn.close();
                 } catch (SQLException closeEx) {
-                    logger.log(System.Logger.Level.ERROR, "Erro ao fechar conexão.", closeEx);
+                    logger.log(Level.ERROR, "Erro ao fechar conexão.", closeEx);
                 }
             }
         }
 
         return idContaInserida;
     }
+    
+    public void atualizarSaldoPorNumeroConta(int numeroConta, double valor) throws SQLException {
+        if (valor == 0) {
+            throw new IllegalArgumentException("Valor para atualização do saldo não pode ser zero.");
+        }
 
+        String sql = "UPDATE conta SET saldo = saldo + ? WHERE numero_conta = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDouble(1, valor); 
+            stmt.setInt(2, numeroConta); 
 
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new SQLException("Nenhuma conta encontrada para o número " + numeroConta);
+            }
+        } catch (SQLException e) {
+            throw new SQLException("Erro ao atualizar saldo da conta com número " + numeroConta, e);
+        }
+    }
+    
+ // Buscar saldo utilizando o número da conta (int)
+    public double buscarSaldoPorNumeroConta(int numeroConta) throws SQLException {
+        String sql = "SELECT saldo FROM conta WHERE numero_conta = ?";
+        double saldo = 0.0;
 
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, numeroConta); // Usa numeroConta como parâmetro
 
- // Salvar cliente no banco
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    saldo = rs.getDouble("saldo"); // Obtém o saldo da conta
+                } else {
+                    throw new SQLException("Conta com número " + numeroConta + " não encontrada.");
+                }
+            }
+        } catch (SQLException e) {
+            throw new SQLException("Erro ao buscar saldo da conta com número " + numeroConta, e);
+        }
+
+        return saldo;
+    }
+
     public int salvarCliente(Cliente cliente) {
         String sqlUsuario = """
             INSERT INTO usuario (nome, cpf, data_nascimento, telefone, tipo_usuario, senha) 
@@ -110,27 +146,30 @@ public class ClienteDAO {
         String sqlCliente = "INSERT INTO cliente (id_usuario) VALUES (?)";
         int idUsuarioInserido = -1;
 
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmtUsuario = conn.prepareStatement(sqlUsuario, Statement.RETURN_GENERATED_KEYS)) {
+        Connection conn = null; // Declare connection outside the try-with-resources block
 
+        try {
+            conn = ConnectionFactory.getConnection(); // Initialize the connection
             conn.setAutoCommit(false);
 
-            // Salvar usuário
-            stmtUsuario.setString(1, cliente.getNome());
-            stmtUsuario.setString(2, cliente.getCpf());
-            stmtUsuario.setDate(3, Date.valueOf(cliente.getDataNascimento()));
-            stmtUsuario.setString(4, cliente.getTelefone());
-            stmtUsuario.setString(5, "CLIENTE");
-            stmtUsuario.setString(6, cliente.getSenhaHash());
-            stmtUsuario.executeUpdate();
+            // Save user
+            try (PreparedStatement stmtUsuario = conn.prepareStatement(sqlUsuario, Statement.RETURN_GENERATED_KEYS)) {
+                stmtUsuario.setString(1, cliente.getNome());
+                stmtUsuario.setString(2, cliente.getCpf());
+                stmtUsuario.setDate(3, Date.valueOf(cliente.getDataNascimento()));
+                stmtUsuario.setString(4, cliente.getTelefone());
+                stmtUsuario.setString(5, "CLIENTE");
+                stmtUsuario.setString(6, cliente.getSenhaHash());
+                stmtUsuario.executeUpdate();
 
-            try (ResultSet rsUsuario = stmtUsuario.getGeneratedKeys()) {
-                if (rsUsuario.next()) {
-                    idUsuarioInserido = rsUsuario.getInt(1);
+                try (ResultSet rsUsuario = stmtUsuario.getGeneratedKeys()) {
+                    if (rsUsuario.next()) {
+                        idUsuarioInserido = rsUsuario.getInt(1);
+                    }
                 }
             }
 
-            // Salvar cliente associado ao usuário
+            // Save associated client
             try (PreparedStatement stmtCliente = conn.prepareStatement(sqlCliente)) {
                 stmtCliente.setInt(1, idUsuarioInserido);
                 stmtCliente.executeUpdate();
@@ -139,18 +178,79 @@ public class ClienteDAO {
             conn.commit();
         } catch (SQLException e) {
             logger.log(Level.ERROR, "Erro ao salvar cliente no banco de dados.", e);
-            // Reabre a conexão e executa rollback
-            try (Connection conn = ConnectionFactory.getConnection()) {
-                if (conn != null) {
+            if (conn != null) {
+                try {
                     conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    logger.log(Level.ERROR, "Erro ao fazer rollback.", rollbackEx);
                 }
-            } catch (SQLException rollbackEx) {
-                logger.log(Level.ERROR, "Erro ao fazer rollback.", rollbackEx);
+            }
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close(); // Ensure the connection is closed in the finally block
+                } catch (SQLException closeEx) {
+                    logger.log(Level.ERROR, "Erro ao fechar conexão.", closeEx);
+                }
             }
         }
 
-        return idUsuarioInserido; // Retorna o ID gerado do usuário
+        return idUsuarioInserido;
     }
+    
+    // Método para buscar cliente por CPF
+ // Dentro de `clienteDAO.buscarClientePorCpf(cpf)`
+    public Cliente buscarClientePorCpf(String cpf) {
+        Cliente cliente = null;
+        // Consulta ao banco de dados para buscar cliente pelo CPF
+        try {
+        	Connection conn = ConnectionFactory.getConnection();
+            String query = "SELECT * FROM clientes WHERE cpf = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, cpf);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                // Criação do objeto Cliente com os dados obtidos
+                cliente = new Cliente();
+                cliente.setCpf(rs.getString("cpf"));
+                cliente.setNome(rs.getString("nome"));
+                cliente.setSenha(rs.getString("senha"));  // Verifique se o nome do campo está correto
+                // Adicionar outras propriedades conforme necessário
+                System.out.println("Cliente encontrado: " + cliente.getCpf());
+            } else {
+                System.out.println("Nenhum cliente encontrado com o CPF: " + cpf);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return cliente;
+    }
+
+    // Dentro de `clienteDAO.buscarContasPorCliente(cpf)`
+    public List<Conta> buscarContasPorCliente(String cpf) {
+        List<Conta> contas = new ArrayList<>();
+        try {
+        	Connection conn = ConnectionFactory.getConnection();
+            String query = "SELECT * FROM contas WHERE cpf_cliente = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, cpf);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Conta conta = new Conta();
+                conta.setNumeroConta(rs.getString("numero_conta"));
+                conta.setSaldo(rs.getDouble("saldo"));
+                contas.add(conta);
+                System.out.println("Conta encontrada: " + conta.getNumeroConta());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return contas;
+    }
+
+
 
 
     // Buscar cliente por ID
@@ -200,24 +300,24 @@ public class ClienteDAO {
         return cliente;
     }
 
-    // Buscar saldo por ID do cliente
-    public double buscarSaldoPorContaId(int idCliente) throws SQLException {
-        String sql = "SELECT saldo FROM conta WHERE id_cliente = ?";
+    public double buscarSaldoPorNumeroConta(String numeroConta) throws SQLException {
+        String sql = "SELECT saldo FROM conta WHERE numero_conta = ?";
         double saldo = 0.0;
 
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, idCliente);
+            stmt.setString(1, numeroConta); // Substituí o idCliente pelo número da conta
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     saldo = rs.getDouble("saldo");
                 }
             }
         } catch (SQLException e) {
-            throw new SQLException("Erro ao buscar saldo da conta do cliente " + idCliente, e);
+            throw new SQLException("Erro ao buscar saldo da conta com número " + numeroConta, e);
         }
         return saldo;
     }
+
 
     // Atualizar saldo de uma conta
     public void atualizarSaldo(int idCliente, double valor) throws SQLException {
@@ -225,7 +325,7 @@ public class ClienteDAO {
             throw new IllegalArgumentException("Valor para atualização do saldo não pode ser zero.");
         }
 
-        String sql = "UPDATE conta SET saldo = saldo + ? WHERE id_cliente = ?";
+        String sql = "UPDATE conta SET saldo = saldo + ? WHERE numero_conta = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setDouble(1, valor);
@@ -266,11 +366,11 @@ public class ClienteDAO {
     }
 
     // Verificar se cliente existe
-    public boolean clienteExiste(int id_cliente) throws SQLException {
+    public boolean clienteExiste(int idCliente) throws SQLException {
         String sql = "SELECT 1 FROM cliente WHERE id_cliente = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id_cliente);
+            stmt.setInt(1, idCliente);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next(); // Retorna true se o cliente existe
             }

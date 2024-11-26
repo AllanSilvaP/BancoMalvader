@@ -2,6 +2,8 @@ package model;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Cliente extends Usuario implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -64,6 +66,17 @@ public class Cliente extends Usuario implements Serializable {
                 endereco != null ? endereco.toString() : "Endereço não disponível",
                 conta != null ? conta.getNumeroConta() : "Sem conta");
     }
+    
+    private List<Conta> contas = new ArrayList<>();
+
+    public List<Conta> getContas() {
+        return contas;
+    }
+
+    public void setContas(List<Conta> contas) {
+        this.contas = contas;
+    }
+
     
     public void setUsuario(Usuario usuario) {
         this.setNome(usuario.getNome());

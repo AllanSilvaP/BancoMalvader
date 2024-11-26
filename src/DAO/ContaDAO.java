@@ -4,14 +4,12 @@ import model.Cliente;
 import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
-import model.Endereco;
 import util.DBUtil;
 
 import java.sql.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import exception.ClienteNotFoundException;
 
 public class ContaDAO {
 
@@ -68,15 +66,30 @@ public class ContaDAO {
                 }
             }
 
-            // Commit da transação
+            // Inserir em conta_corrente ou conta_poupanca
+            if (conta instanceof ContaCorrente corrente) {
+                try (PreparedStatement stmtCorrente = conn.prepareStatement(sqlContaCorrente)) {
+                    stmtCorrente.setDouble(1, corrente.getLimite());
+                    stmtCorrente.setDate(2, Date.valueOf(corrente.getDataVencimento()));
+                    stmtCorrente.setInt(3, idContaInserida);
+                    stmtCorrente.executeUpdate();
+                }
+            } else if (conta instanceof ContaPoupanca poupanca) {
+                try (PreparedStatement stmtPoupanca = conn.prepareStatement(sqlContaPoupanca)) {
+                    stmtPoupanca.setDouble(1, poupanca.getTaxaRendimento());
+                    stmtPoupanca.setInt(2, idContaInserida);
+                    stmtPoupanca.executeUpdate();
+                }
+            }
+
             conn.commit();
         } catch (SQLException e) {
-            
+            logger.log(Level.SEVERE, "Erro ao salvar conta no banco de dados.", e);
             if (conn != null) {
                 try {
                     conn.rollback();
                 } catch (SQLException rollbackEx) {
-                    
+                    logger.log(Level.SEVERE, "Erro ao realizar rollback.", rollbackEx);
                 }
             }
         } finally {
@@ -84,7 +97,7 @@ public class ContaDAO {
                 try {
                     conn.close();
                 } catch (SQLException closeEx) {
-                 
+                    logger.log(Level.SEVERE, "Erro ao fechar conexão.", closeEx);
                 }
             }
         }

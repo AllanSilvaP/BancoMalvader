@@ -39,7 +39,7 @@ public class AberturaDeContaScreen extends JFrame {
 
         // Campos da conta
         JLabel numeroContaLabel = new JLabel("Número da Conta:");
-        JTextField numeroContaField = new JTextField();
+        JTextField numeroContaField = new JTextField();  // Mudando para JTextField (String)
         panel.add(numeroContaLabel);
         panel.add(numeroContaField);
 
@@ -62,7 +62,7 @@ public class AberturaDeContaScreen extends JFrame {
                 try {
                     // Captura os dados do formulário
                     String cpfCliente = cpfField.getText();
-                    String numeroContaText = numeroContaField.getText();
+                    String numeroContaText = numeroContaField.getText(); // Alterando para String
                     String saldoInicialText = saldoField.getText();
                     String tipoConta = (String) tipoContaCombo.getSelectedItem();
 
@@ -84,7 +84,7 @@ public class AberturaDeContaScreen extends JFrame {
 
                     double saldoInicial = Double.parseDouble(saldoInicialText);
 
-                    // Cria a nova conta
+                    // Cria a nova conta com número de conta como String
                     Conta novaConta = new Conta(numeroContaText, "1234", saldoInicial, tipoConta, 0);
 
                     // Chama o controlador para cadastrar a conta

@@ -6,7 +6,7 @@ import controller.ContaController;
 import controller.FuncionarioController;
 import service.Autenticacao;
 import DAO.FuncionarioDAO;
-import DAO.ContaDAO; // Import necessário para ContaDAO
+import DAO.ContaDAO; 
 import View.LoginView;
 import View.MenuClienteView;
 import View.MenuFuncionarioView;
@@ -15,11 +15,9 @@ import java.sql.SQLException;
 
 public class BancoMalvader {
 
-    private FuncionarioController funcionarioController;
     private Autenticacao autenticacaoService;
 
     public BancoMalvader(ContaController contaController, ClienteController clienteController, FuncionarioController funcionarioController, Autenticacao autenticacaoService) {
-        this.funcionarioController = funcionarioController;
         this.autenticacaoService = autenticacaoService;
     }
 
@@ -33,7 +31,7 @@ public class BancoMalvader {
             new ContaController(),
             new ClienteController(),
             new FuncionarioController(funcionarioDAO, contaDAO), // Passando instâncias corretas
-            new Autenticacao()
+            new Autenticacao(null, null)
         );
 
         banco.iniciarSistema();

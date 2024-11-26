@@ -6,6 +6,10 @@ import model.Funcionario;
 import model.Endereco;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 public class UsuarioDAO {
     private static final System.Logger logger = System.getLogger(UsuarioDAO.class.getName());
@@ -25,6 +29,90 @@ public class UsuarioDAO {
     private Connection getConnection() {
         return this.connection;
     }
+    
+ // Buscar informações completas do usuário por ID
+    public Usuario buscarUsuarioPorId(int idUsuario) {
+        String sql = """
+            SELECT u.id_usuario, u.nome, u.cpf, u.data_nascimento, u.telefone, u.tipo_usuario, u.senha,
+                   e.local, e.numero_casa, e.bairro, e.cidade, e.estado, e.cep
+            FROM usuario u
+            LEFT JOIN endereco e ON e.id_usuario = u.id_usuario
+            WHERE u.id_usuario = ?
+        """;
+
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, idUsuario);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Usuario usuario = new Funcionario();
+                    usuario.setId(rs.getInt("id_usuario"));
+                    usuario.setNome(rs.getString("nome"));
+                    usuario.setCpf(rs.getString("cpf"));
+                    usuario.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
+                    usuario.setTelefone(rs.getString("telefone"));
+                    usuario.setSenha(rs.getString("senha"));
+
+                    // Verificar e preencher endereço, se disponível
+                    Endereco endereco = new Endereco();
+                    endereco.setLocal(rs.getString("local"));
+                    endereco.setNumeroCasa(rs.getInt("numero_casa"));
+                    endereco.setBairro(rs.getString("bairro"));
+                    endereco.setCidade(rs.getString("cidade"));
+                    endereco.setEstado(rs.getString("estado"));
+                    endereco.setCep(rs.getString("cep"));
+                    usuario.setEndereco(endereco);
+
+                    return usuario;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(System.Logger.Level.ERROR, "Erro ao buscar informações do usuário por ID", e);
+        }
+        return null;
+    }
+
+    // Listar todos os usuários
+    public List<Usuario> listarUsuarios() {
+        List<Usuario> usuarios = new ArrayList<>();
+        String sql = "SELECT * FROM usuario";
+
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Usuario usuario = new Funcionario();
+                usuario.setId(rs.getInt("id_usuario"));
+                usuario.setNome(rs.getString("nome"));
+                usuario.setCpf(rs.getString("cpf"));
+                usuario.setDataNascimento(rs.getDate("data_nascimento").toLocalDate());
+                usuario.setTelefone(rs.getString("telefone"));
+                usuario.setSenha(rs.getString("senha"));
+                usuarios.add(usuario);
+            }
+        } catch (SQLException e) {
+            logger.log(System.Logger.Level.ERROR, "Erro ao listar todos os usuários", e);
+        }
+
+        return usuarios;
+    }
+
+    // Validar CPF e senha
+    public boolean validarCpfESenha(String cpf, String senha) {
+        String sql = "SELECT senha FROM usuario WHERE cpf = ?";
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql)) {
+            stmt.setString(1, cpf);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String senhaHash = rs.getString("senha");
+                    return BCrypt.checkpw(senha, senhaHash); // Verifica a senha com o hash armazenado
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(System.Logger.Level.ERROR, "Erro ao validar CPF e senha", e);
+        }
+        return false;
+    }
+
 
     // Método para verificar se o CPF já existe no banco de dados
     public boolean cpfExiste(String cpf) {

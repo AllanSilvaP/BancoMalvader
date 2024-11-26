@@ -3,6 +3,8 @@ package View;
 import javax.swing.*;
 import service.Autenticacao; // Certifique-se de que o caminho está correto
 import DAO.FuncionarioDAO;
+import DAO.UsuarioDAO;
+import DAO.ClienteDAO;
 import DAO.ContaDAO;
 import controller.BancoController;
 import controller.FuncionarioController;
@@ -29,7 +31,7 @@ public class LoginView extends JFrame {
         funcionarioController = new FuncionarioController(funcionarioDAO, contaDAO);
 
         // Instância da classe de autenticação
-        autenticacao = new Autenticacao();
+        autenticacao = new Autenticacao(new UsuarioDAO(), new ClienteDAO());
 
         setTitle("Banco Malvader - Login");
         setSize(400, 300);
